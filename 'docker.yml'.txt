@@ -1,0 +1,62 @@
+---
+- hosts: local
+  tasks:
+  - yum_repository:
+          name: "docker"
+          description: "yum repo for docker"
+          baseurl: https://download.docker.com/linux/centos/7/x86_64/stable/
+          gpgcheck: no
+
+- name: installing docker software
+    package:
+        name: docker-ce-18.09.0-3.el7.x86_64
+        state: present
+
+- service:
+          name: "docker"
+          state: started
+
+- package:
+          name: python36
+
+- pip:
+          name: docker
+
+- docker_image:
+          name: "httpd"
+          source: pull
+- name: dir for webpage
+    file:
+       path: "/page"
+       state: directory
+
+- name: copying webpage
+    copy:
+       src: "/root/hi.txt"
+       dest: "/page/"
+
+- name: sending doc root changed file
+    copy:
+       src: "/root/httpd.conf"
+       dest: "/root/"
+
+- docker_container:
+       name: "webserver1"
+       image: httpd
+       state: started
+       tty: yes
+       ports:
+             - "8080:80"
+       volumes:
+             - "/page/:/var/www/html/"
+
+- shell: docker cp /root/httpd.conf webserver1:/usr/local/apache2/conf/httpd.conf
+
+- name: start container again
+    shell: docker restart webserver1
+
+- name: stopping the firewall
+    service:
+         name: firewalld
+         state: stopped
+         enabled: yes
